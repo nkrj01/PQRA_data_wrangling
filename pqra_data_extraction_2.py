@@ -226,8 +226,5 @@ df["Sorting"] = df["unit_ops"].apply(sorting_column)
 df = df.drop_duplicates()
 df = df[~df[corr].str.contains("N/a")]
 
-# Exporting to Excel
-# df.to_excel(
-#     r"C:\Users\nraj01\OneDrive - Amgen\Nikhil\Python related projects\pythonProject1\PQRA initiative\excel1 table.xlsx",
-#     index=False,
-# )
+Exporting to Excel
+df.to_excel( r"C:\outout_table.xlsx", index=False)
