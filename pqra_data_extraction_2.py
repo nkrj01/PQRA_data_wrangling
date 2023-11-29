@@ -1,39 +1,27 @@
 import pandas as pd
 import re
 
-
                                 # Global variables #
 
 # defining the variable for columns name for increased readablity without
 # changing the column names in original data file
-occurence = "Occurrence_Occurrence Decision Tree Code"
-correlation = "Unit Operation_Correlation (↑,↓ or testing only)"
-stringency = "Detection at Unit Operation_Stringency (i)"
-risk_score = "Overall Unit Operation Risk Level_Overall Unit Operation Risk Level"
-method_num = "Detection at Unit Operation_Detection Method"
+occ = "occur"
+corr = "corr"
+stri = "stri"
+risk = "rl"
+method = "MET"
 
-path = r"C:\Users\nraj01\OneDrive - Amgen\Nikhil\Python related projects\pythonProject1\PQRA initiative"
-unit_ops_key = pd.read_excel(path + r"\Unit operations key.xlsx")
-unit_ops = unit_ops_key["Unit Operations Clean up"].values.tolist()
+path = r"C:\path\to\file"
+unit_ops_key = pd.read_excel(path + r"\file.xlsx")
+unit_ops = unit_ops_key["UOLP"].values.tolist()
 
 
 def is_nan(strg):
-    """
-    A function to check whether a cell of a dataframe is a string or NA
-    Args: string
-    return: bool
-    """
     return strg != strg
 
 
 def fillna_ce(df):
-    """
-    Changes 'x' of control elements in 1 and empties(or NA) to 0
 
-    Args: DF
-    return: binary
-
-    """
     if df["variable1"] == "Control Element":
         if not (df["value"]):
             return 0
@@ -46,12 +34,7 @@ def fillna_ce(df):
 
 
 def method_extract(df):
-    """
-    extract MET-XXXXXX text from a string of a column and store it in a different column
-    Args: df
-    return: string in form of MET-XXXXXX
 
-    """
     pattern = re.compile(r"M[A-Z][A-Z]-\d\d\d\d\d\d")
     if not is_nan(df[method_num]):
         match = pattern.search(df[method_num])
@@ -64,12 +47,6 @@ def method_extract(df):
 
 
 def variable1(df):
-    """
-    Creates a column with variable1 name. Self explainatory.
-    Args: df
-    returns: string
-
-    """
 
     if "Control" in df["variable"]:
         return "Control Element"
@@ -82,32 +59,23 @@ def variable1(df):
 
 
 def merge_occurrence_DTC(df):
-    """
-    Merge two decision tree code column into one.
-    """
 
-    if is_nan(df["Occurrence_Decision Tree Code"]):
-        return df[occurence]
+    if is_nan(df["ODCD"]):
+        return df[occ]
     else:
-        return df["Occurrence_Decision Tree Code"]
+        return df["ODCD"]
 
 
 def merge_occurrence_OS(df):
-    """
-    merge two occurrence score columns into one.
-    """
-    if is_nan(df["Occurrence_Occurrence Score"]):
-        return df["Occurrence_Likelihood of Occurrence Score"]
+
+    if is_nan(df["OOC"]):
+        return df["OLOC"]
     else:
-        return df["Occurrence_Occurrence Score"]
+        return df["OcOC"]
 
 
 def value_string(df):
-    """
-    This function is used to separate integer values and string values and store them in
-    two different columns called "value" and "value_string". This is done to aid spotfire in visualization.
-
-    """
+  
 
     if is_nan(df["value"]):
         return ""
@@ -137,9 +105,9 @@ def separate_654_SKU(df):
 
     """
     if "Vial" in df["Presentation"] and "654" in df["Product"]:
-        return "ABP 654 (vial)"
+        return "ABP (vial)"
     elif "PFS" in df["Presentation"] and "654" in df["Product"]:
-        return "ABP 654 (PFS)"
+        return "ABP (PFS)"
     else:
         return df["Product"]
 
@@ -150,10 +118,10 @@ def fillna_overall_risk_level(df):
     level with NA
 
     """
-    if "NA" in df[correlation] or "Testing" in df[correlation]:
+    if "NA" in df[corr] or "Testing" in df[corr]:
         return "NA"
     else:
-        return df[risk_score]
+        return df[risk]
 
 
 def helper_correlation(df):
@@ -161,7 +129,7 @@ def helper_correlation(df):
     Used to create a helper column that codes string to a particular integer. This helps with
     excel pivot table creation.
     """
-    word = df[correlation]
+    word = df[corr]
     if word == "NA":
         return 1
     elif word == "↑":
@@ -198,7 +166,7 @@ def helper_occurence_code(df):
     Used to create a helper column that codes string to a particular integer. This helps with
     excel pivot table creation.
     """
-    letter = df[occurence]
+    letter = df[occ]
     position_A = ord("A")
 
     if letter == "NA":
@@ -227,8 +195,8 @@ ws_name_key = pd.read_excel(path + r"\Worksheet name key.xlsx")
 column_key = pd.read_excel(path + r"\Column select key.xlsx")
 
 # Merge two decision tree columns into one. Do the same for Occurrence score column.
-df[occurence] = df.apply(merge_occurrence_DTC, axis=1)
-df["Occurrence_Occurrence Score"] = df.apply(merge_occurrence_OS, axis=1)
+df[occ] = df.apply(merge_occurrence_DTC, axis=1)
+df["OOC"] = df.apply(merge_occurrence_OS, axis=1)
 
 # Select the columns of interest
 df = df[column_key["Columns"].values.tolist()]
@@ -244,19 +212,19 @@ df = df.merge(ws_name_key, how="left")
 df = df[df["count2"].notna()]
 
 # setting up and cleaning the data for visualization
-df[correlation] = df[correlation].fillna("NA")
-df[occurence] = df[occurence].fillna("NA")
+df[corr] = df[corr].fillna("NA")
+df[occ] = df[occ].fillna("NA")
 df["Product"] = df.apply(separate_654_SKU, axis=1)
-df[risk_score] = df.apply(fillna_overall_risk_level, axis=1)
-df[risk_score] = df[risk_score].fillna("NA")
-df["Helper_correlation"] = df.apply(helper_correlation, axis=1)
-df["Helper_decision tree code"] = df.apply(helper_occurence_code, axis=1)
-df["Helper_Overall unit op risk"] = df.apply(helper_risk_score, axis=1)
-df["Helper_Steringency score"] = df[stringency]
-df["Helper_Steringency score"] = df["Helper_Steringency score"].fillna(10)
-df["Sorting"] = df["Unit Operations Clean up"].apply(sorting_column)
+df[risk] = df.apply(fillna_overall_risk_level, axis=1)
+df[risk] = df[risk].fillna("NA")
+df["Helper_cor"] = df.apply(helper_correlation, axis=1)
+df["Helper_dtc"] = df.apply(helper_occurence_code, axis=1)
+df["Helper_risk"] = df.apply(helper_risk_score, axis=1)
+df["Helper_Steri"] = df[stringency]
+df["Helper_Stri_score"] = df["Helper_Stri"].fillna(10)
+df["Sorting"] = df["unit_ops"].apply(sorting_column)
 df = df.drop_duplicates()
-df = df[~df[correlation].str.contains("N/a")]
+df = df[~df[corr].str.contains("N/a")]
 
 # Exporting to Excel
 # df.to_excel(
